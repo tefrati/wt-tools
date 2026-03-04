@@ -263,6 +263,13 @@ if [ -d "$REPO_WORKTREES_DIR" ]; then
     fi
 fi
 
+# Pull latest main to avoid conflicts with other active worktrees
+echo ""
+echo "[6/5] Pulling latest changes on main..."
+cd "$REPO_ROOT"
+git pull || echo "  Warning: Failed to pull latest changes on main"
+cd - > /dev/null
+
 echo ""
 echo "========================================"
 echo "Cleanup complete!"
