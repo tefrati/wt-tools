@@ -329,8 +329,9 @@ $envLocalPath = Join-Path $WorktreePath ".env.local"
 if (Test-Path $envLocalPath) {
     $envContent = Get-Content $envLocalPath -Raw
     $envContent = $envContent -replace 'NEXT_PUBLIC_APP_URL=http://localhost:\d+', "NEXT_PUBLIC_APP_URL=http://localhost:$Port"
+    $envContent = $envContent -replace 'NEXTAUTH_URL=http://localhost:\d+', "NEXTAUTH_URL=http://localhost:$Port"
     Set-Content $envLocalPath $envContent -NoNewline
-    Write-Host "  Updated NEXT_PUBLIC_APP_URL to port $Port" -ForegroundColor Green
+    Write-Host "  Updated NEXT_PUBLIC_APP_URL and NEXTAUTH_URL to port $Port" -ForegroundColor Green
 }
 
 # Step 4: Create TASKS.md and add to .gitignore

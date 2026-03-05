@@ -396,10 +396,12 @@ if [ -f "$ENV_LOCAL_PATH" ]; then
     # macOS sed requires -i '' for in-place editing
     if [ "$(uname)" = "Darwin" ]; then
         sed -i '' "s|NEXT_PUBLIC_APP_URL=http://localhost:[0-9]*|NEXT_PUBLIC_APP_URL=http://localhost:$PORT|g" "$ENV_LOCAL_PATH"
+        sed -i '' "s|NEXTAUTH_URL=http://localhost:[0-9]*|NEXTAUTH_URL=http://localhost:$PORT|g" "$ENV_LOCAL_PATH"
     else
         sed -i "s|NEXT_PUBLIC_APP_URL=http://localhost:[0-9]*|NEXT_PUBLIC_APP_URL=http://localhost:$PORT|g" "$ENV_LOCAL_PATH"
+        sed -i "s|NEXTAUTH_URL=http://localhost:[0-9]*|NEXTAUTH_URL=http://localhost:$PORT|g" "$ENV_LOCAL_PATH"
     fi
-    echo "  Updated NEXT_PUBLIC_APP_URL to port $PORT"
+    echo "  Updated NEXT_PUBLIC_APP_URL and NEXTAUTH_URL to port $PORT"
 fi
 
 # Step 4: Create TASKS.md and add to .gitignore
