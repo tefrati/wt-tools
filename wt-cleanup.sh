@@ -7,11 +7,12 @@ set -euo pipefail
 # and cleans up any remaining files.
 #
 # Usage:
-#   wt-cleanup <worktree-name> [-r] [-f]
+#   wt-cleanup <worktree-name> [-r] [-f] [-a <app-dir>]
 #
 # Options:
 #   -r, --remote    Also delete the remote branch
 #   -f, --force     Skip confirmation prompt
+#   -a <dir>        App subdirectory (e.g. app) - used for .env location
 #
 # Examples:
 #   wt-cleanup feature-add-auth
@@ -22,9 +23,10 @@ set -euo pipefail
 WORKTREE_NAME=""
 DELETE_REMOTE=0
 FORCE=0
+APP_DIR=""
 
 show_help() {
-    echo "Usage: wt-cleanup <worktree-name> [-r] [-f]"
+    echo "Usage: wt-cleanup <worktree-name> [-r] [-f] [-a <app-dir>]"
     echo ""
     echo "Cleans up a git worktree after PR has been merged"
     echo ""
@@ -32,6 +34,7 @@ show_help() {
     echo "  worktree-name  The name of the worktree folder to remove"
     echo ""
     echo "Options:"
+    echo "  -a <dir>       App subdirectory (e.g. app) - used for .env location"
     echo "  -r, --remote   Also delete the remote branch"
     echo "  -f, --force    Skip confirmation prompt"
     echo "  -h, --help     Show this help message"
@@ -40,6 +43,7 @@ show_help() {
     echo "  wt-cleanup feature-add-auth"
     echo "  wt-cleanup feature-add-auth -r"
     echo "  wt-cleanup feature-add-auth -r -f"
+    echo "  wt-cleanup feature-add-auth -a app"
     exit 0
 }
 
@@ -51,6 +55,10 @@ while [[ $# -gt 0 ]]; do
         -r|--remote)
             DELETE_REMOTE=1
             shift
+            ;;
+        -a)
+            APP_DIR="$2"
+            shift 2
             ;;
         -f|--force)
             FORCE=1
@@ -67,6 +75,11 @@ done
 
 # Configuration
 WORKTREES_BASE="$HOME/Dev/worktrees"
+if [ -n "$APP_DIR" ]; then
+    ENV_PATH="$APP_DIR/.env"
+else
+    ENV_PATH=".env"
+fi
 
 # Get the current git repo root
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || {
@@ -154,7 +167,7 @@ fi
 # Step 1: Kill any running dev server on this worktree's port
 echo ""
 echo "[1/5] Checking for running dev servers..."
-ENV_LOCAL_PATH="$WORKTREE_PATH/.env"
+ENV_LOCAL_PATH="$WORKTREE_PATH/$ENV_PATH"
 if [ -f "$ENV_LOCAL_PATH" ]; then
     PORT_MATCH=$(grep -o 'NEXT_PUBLIC_APP_URL=http://localhost:[0-9]*' "$ENV_LOCAL_PATH" | grep -o '[0-9]*$' || true)
     if [ -n "$PORT_MATCH" ]; then
@@ -177,8 +190,8 @@ fi
 # Step 2: Sync new env variables back to main repo
 echo ""
 echo "[2/5] Syncing new .env variables to main repo..."
-MAIN_ENV_LOCAL="$REPO_ROOT/.env"
-WT_ENV_LOCAL="$WORKTREE_PATH/.env"
+MAIN_ENV_LOCAL="$REPO_ROOT/$ENV_PATH"
+WT_ENV_LOCAL="$WORKTREE_PATH/$ENV_PATH"
 if [ -f "$WT_ENV_LOCAL" ]; then
     if [ -f "$MAIN_ENV_LOCAL" ]; then
         NEW_VARS=()
@@ -222,21 +235,17 @@ fi
 # Step 3: Remove the worktree
 echo ""
 echo "[3/5] Removing worktree..."
-cd "$REPO_ROOT"
-if ! git worktree remove "$WORKTREE_PATH" --force 2>/dev/null; then
+if ! git -C "$REPO_ROOT" worktree remove "$WORKTREE_PATH" --force 2>/dev/null; then
     echo "  Warning: git worktree remove failed, trying manual cleanup..."
     rm -rf "$WORKTREE_PATH"
-    git worktree prune
+    git -C "$REPO_ROOT" worktree prune
 fi
-cd - > /dev/null
 
 # Step 4: Delete local branch
 echo ""
 echo "[4/5] Deleting local branch: $BRANCH_NAME..."
 if [ -n "$BRANCH_NAME" ] && [ "$BRANCH_NAME" != "main" ] && [ "$BRANCH_NAME" != "master" ]; then
-    cd "$REPO_ROOT"
-    git branch -D "$BRANCH_NAME" 2>/dev/null || echo "  Branch may have already been deleted or merged"
-    cd - > /dev/null
+    git -C "$REPO_ROOT" branch -D "$BRANCH_NAME" 2>/dev/null || echo "  Branch may have already been deleted or merged"
 else
     echo "  Skipping deletion of protected branch: $BRANCH_NAME"
 fi
@@ -245,9 +254,7 @@ fi
 if [ $DELETE_REMOTE -eq 1 ] && [ -n "$BRANCH_NAME" ] && [ "$BRANCH_NAME" != "main" ] && [ "$BRANCH_NAME" != "master" ]; then
     echo ""
     echo "[5/5] Deleting remote branch: origin/$BRANCH_NAME..."
-    cd "$REPO_ROOT"
-    git push origin --delete "$BRANCH_NAME" 2>/dev/null || echo "  Remote branch may have already been deleted"
-    cd - > /dev/null
+    git -C "$REPO_ROOT" push origin --delete "$BRANCH_NAME" 2>/dev/null || echo "  Remote branch may have already been deleted"
 else
     echo ""
     echo "[5/5] Skipping remote branch deletion"
@@ -266,9 +273,7 @@ fi
 # Pull latest main to avoid conflicts with other active worktrees
 echo ""
 echo "[6/5] Pulling latest changes on main..."
-cd "$REPO_ROOT"
-git pull || echo "  Warning: Failed to pull latest changes on main"
-cd - > /dev/null
+git -C "$REPO_ROOT" pull || echo "  Warning: Failed to pull latest changes on main"
 
 echo ""
 echo "========================================"

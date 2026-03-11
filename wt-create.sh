@@ -7,13 +7,13 @@ set -euo pipefail
 # installs dependencies, and opens your IDE.
 #
 # Usage:
-#   wt-create <branch-name> [-p <port>] [-e <app-dir>]
-#   wt-create -b [-p <port>] [-e <app-dir>]
+#   wt-create <branch-name> [-p <port>] [-a <app-dir>]
+#   wt-create -b [-p <port>] [-a <app-dir>]
 #
 # Examples:
 #   wt-create feature/add-auth
 #   wt-create feature/add-auth -p 3005
-#   wt-create feature/add-auth -e apps/web
+#   wt-create feature/add-auth -a app
 #   wt-create -b                          # Pick from backlog items
 
 # Parse arguments
@@ -24,8 +24,8 @@ DEBT_MODE=0
 DEBT_DESCRIPTION=""
 
 show_help() {
-    echo "Usage: wt-create <branch-name> [-p <port>] [-e <app-dir>]"
-    echo "       wt-create -b [-p <port>] [-e <app-dir>]"
+    echo "Usage: wt-create <branch-name> [-p <port>] [-a <app-dir>]"
+    echo "       wt-create -b [-p <port>] [-a <app-dir>]"
     echo ""
     echo "Creates a new git worktree with full development setup"
     echo ""
@@ -34,14 +34,14 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  -b, --backlog  Pick a backlog item from docs/backlog.md"
-    echo "  -e <dir>       App directory containing .env (e.g. apps/web)"
+    echo "  -a <dir>       App subdirectory (e.g. app) - used for .env and dev server"
     echo "  -p <port>      Port to configure in .env (auto-assigned if not specified)"
     echo "  -h, --help     Show this help message"
     echo ""
     echo "Examples:"
     echo "  wt-create feature/add-auth"
     echo "  wt-create feature/add-auth -p 3005"
-    echo "  wt-create feature/add-auth -e apps/web"
+    echo "  wt-create feature/add-auth -a app"
     echo "  wt-create -b"
     echo ""
     echo "Backlog Mode (-b):"
@@ -66,7 +66,7 @@ while [[ $# -gt 0 ]]; do
             DEBT_MODE=1
             shift
             ;;
-        -e)
+        -a)
             APP_DIR="$2"
             shift 2
             ;;
@@ -486,7 +486,12 @@ echo "[5/7] Installing dependencies with pnpm..."
 # Step 6: Start dev server in background
 echo ""
 echo "[6/7] Starting dev server on port $PORT..."
-pnpm --dir "$WORKTREE_PATH" dev -p "$PORT" &> "$WORKTREE_PATH/.dev-server.log" &
+if [ -n "$APP_DIR" ]; then
+    DEV_DIR="$WORKTREE_PATH/$APP_DIR"
+else
+    DEV_DIR="$WORKTREE_PATH"
+fi
+pnpm --dir "$DEV_DIR" dev -p "$PORT" &> "$WORKTREE_PATH/.dev-server.log" &
 DEV_PID=$!
 echo "  Dev server starting (PID: $DEV_PID, log: .dev-server.log)"
 
