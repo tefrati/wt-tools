@@ -7,23 +7,25 @@ set -euo pipefail
 # installs dependencies, and opens your IDE.
 #
 # Usage:
-#   wt-create <branch-name> [-p <port>]
-#   wt-create -b [-p <port>]
+#   wt-create <branch-name> [-p <port>] [-e <app-dir>]
+#   wt-create -b [-p <port>] [-e <app-dir>]
 #
 # Examples:
 #   wt-create feature/add-auth
 #   wt-create feature/add-auth -p 3005
+#   wt-create feature/add-auth -e apps/web
 #   wt-create -b                          # Pick from backlog items
 
 # Parse arguments
 BRANCH_NAME=""
 PORT=0
+APP_DIR=""
 DEBT_MODE=0
 DEBT_DESCRIPTION=""
 
 show_help() {
-    echo "Usage: wt-create <branch-name> [-p <port>]"
-    echo "       wt-create -b [-p <port>]"
+    echo "Usage: wt-create <branch-name> [-p <port>] [-e <app-dir>]"
+    echo "       wt-create -b [-p <port>] [-e <app-dir>]"
     echo ""
     echo "Creates a new git worktree with full development setup"
     echo ""
@@ -32,12 +34,14 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  -b, --backlog  Pick a backlog item from docs/backlog.md"
+    echo "  -e <dir>       App directory containing .env (e.g. apps/web)"
     echo "  -p <port>      Port to configure in .env (auto-assigned if not specified)"
     echo "  -h, --help     Show this help message"
     echo ""
     echo "Examples:"
     echo "  wt-create feature/add-auth"
     echo "  wt-create feature/add-auth -p 3005"
+    echo "  wt-create feature/add-auth -e apps/web"
     echo "  wt-create -b"
     echo ""
     echo "Backlog Mode (-b):"
@@ -61,6 +65,10 @@ while [[ $# -gt 0 ]]; do
         -b|--backlog)
             DEBT_MODE=1
             shift
+            ;;
+        -e)
+            APP_DIR="$2"
+            shift 2
             ;;
         -p)
             PORT="$2"
@@ -249,8 +257,15 @@ fi
 
 # Configuration
 WORKTREES_BASE="$HOME/Dev/worktrees"
+# Build env file path from app directory
+if [ -n "$APP_DIR" ]; then
+    ENV_PATH="$APP_DIR/.env"
+else
+    ENV_PATH=".env"
+fi
+
 FILES_TO_COPY=(
-    ".env"
+    "$ENV_PATH"
     ".claude/settings.local.json"
 )
 
@@ -304,7 +319,7 @@ if [ "$PORT" -eq 0 ]; then
     if [ -d "$REPO_WORKTREES_DIR" ] && ls "$REPO_WORKTREES_DIR"/* &>/dev/null; then
         for wt in "$REPO_WORKTREES_DIR"/*; do
             if [ -d "$wt" ]; then
-                ENV_FILE="$wt/.env"
+                ENV_FILE="$wt/$ENV_PATH"
                 if [ -f "$ENV_FILE" ]; then
                     PORT_MATCH=$(grep -o 'NEXT_PUBLIC_APP_URL=http://localhost:[0-9]*' "$ENV_FILE" | grep -o '[0-9]*$' || true)
                     if [ -n "$PORT_MATCH" ]; then
@@ -391,7 +406,7 @@ done
 # Step 3: Update port in .env
 echo ""
 echo "[3/7] Configuring port $PORT..."
-ENV_LOCAL_PATH="$WORKTREE_PATH/.env"
+ENV_LOCAL_PATH="$WORKTREE_PATH/$ENV_PATH"
 if [ -f "$ENV_LOCAL_PATH" ]; then
     # macOS sed requires -i '' for in-place editing
     if [ "$(uname)" = "Darwin" ]; then
