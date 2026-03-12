@@ -34,7 +34,7 @@ show_help() {
     echo "  worktree-name  The name of the worktree folder to remove"
     echo ""
     echo "Options:"
-    echo "  -a <dir>       App subdirectory (e.g. app) - used for .env location"
+    echo "  -a <dir>       App subdirectory (e.g. app) - auto-detected from .env location"
     echo "  -r, --remote   Also delete the remote branch"
     echo "  -f, --force    Skip confirmation prompt"
     echo "  -h, --help     Show this help message"
@@ -75,17 +75,60 @@ done
 
 # Configuration
 WORKTREES_BASE="$HOME/Dev/worktrees"
-if [ -n "$APP_DIR" ]; then
-    ENV_PATH="$APP_DIR/.env"
-else
-    ENV_PATH=".env"
-fi
 
 # Get the current git repo root
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || {
     echo "Error: Not inside a git repository. Please run this from within your project."
     exit 1
 }
+
+# Auto-detect .env location if -a was not provided
+if [ -z "$APP_DIR" ]; then
+    ENV_FILES=()
+    while IFS= read -r -d '' f; do
+        ENV_FILES+=("$f")
+    done < <(find "$REPO_ROOT" -maxdepth 3 -name ".env" -not -path "*/node_modules/*" -not -path "*/.git/*" -print0 2>/dev/null)
+
+    if [ ${#ENV_FILES[@]} -eq 1 ]; then
+        ENV_DIR=$(dirname "${ENV_FILES[0]}")
+        if [ "$ENV_DIR" != "$REPO_ROOT" ]; then
+            APP_DIR="${ENV_DIR#$REPO_ROOT/}"
+            echo "Auto-detected .env in: $APP_DIR/"
+        fi
+    elif [ ${#ENV_FILES[@]} -gt 1 ]; then
+        echo "Multiple .env files found:"
+        CHOICES=()
+        for f in "${ENV_FILES[@]}"; do
+            REL="${f#$REPO_ROOT/}"
+            DIR=$(dirname "$REL")
+            if [ "$DIR" = "." ]; then
+                CHOICES+=("(root)")
+            else
+                CHOICES+=("$DIR")
+            fi
+        done
+        for i in "${!CHOICES[@]}"; do
+            echo "  $((i+1))) ${CHOICES[$i]}/.env"
+        done
+        echo ""
+        read -rp "Select which .env to use (1-${#CHOICES[@]}): " ENV_SELECTION
+        if [[ "$ENV_SELECTION" =~ ^[0-9]+$ ]] && [ "$ENV_SELECTION" -ge 1 ] && [ "$ENV_SELECTION" -le ${#CHOICES[@]} ]; then
+            SELECTED="${CHOICES[$((ENV_SELECTION-1))]}"
+            if [ "$SELECTED" != "(root)" ]; then
+                APP_DIR="$SELECTED"
+                echo "Using .env in: $APP_DIR/"
+            fi
+        else
+            echo "Invalid selection, defaulting to root .env"
+        fi
+    fi
+fi
+
+if [ -n "$APP_DIR" ]; then
+    ENV_PATH="$APP_DIR/.env"
+else
+    ENV_PATH=".env"
+fi
 
 REPO_NAME=$(basename "$REPO_ROOT")
 
