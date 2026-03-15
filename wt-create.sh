@@ -428,6 +428,21 @@ git worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH" || {
     exit 1
 }
 
+# Step 1.5: Notify backlog orchestrator of branch creation
+TICKET_ID_MATCH=$(echo "$BRANCH_NAME" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
+if [ -n "$TICKET_ID_MATCH" ]; then
+    BACKLOG_URL="${BACKLOG_ORCHESTRATOR_URL:-http://localhost:3000}"
+    BACKLOG_KEY="${BACKLOG_ORCHESTRATOR_API_KEY:-}"
+    if [ -n "$BACKLOG_KEY" ]; then
+        curl -sf -X POST \
+            -H "Authorization: Bearer $BACKLOG_KEY" \
+            -H "Content-Type: application/json" \
+            "$BACKLOG_URL/api/hooks/branch-created" \
+            -d "{\"ticketId\":\"$TICKET_ID_MATCH\",\"branch\":\"$BRANCH_NAME\"}" \
+            > /dev/null 2>&1 && echo "  Ticket $TICKET_ID_MATCH → in-progress" || true
+    fi
+fi
+
 # Step 2: Copy local config files
 echo ""
 echo "[2/7] Copying local config files..."
