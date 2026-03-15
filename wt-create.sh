@@ -434,12 +434,18 @@ if [ -n "$TICKET_ID_MATCH" ]; then
     BACKLOG_URL="${BACKLOG_ORCHESTRATOR_URL:-http://localhost:3000}"
     BACKLOG_KEY="${BACKLOG_ORCHESTRATOR_API_KEY:-}"
     if [ -n "$BACKLOG_KEY" ]; then
-        curl -sf -X POST \
+        HOOK_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
             -H "Authorization: Bearer $BACKLOG_KEY" \
             -H "Content-Type: application/json" \
             "$BACKLOG_URL/api/hooks/branch-created" \
-            -d "{\"ticketId\":\"$TICKET_ID_MATCH\",\"branch\":\"$BRANCH_NAME\"}" \
-            > /dev/null 2>&1 && echo "  Ticket $TICKET_ID_MATCH → in-progress" || true
+            -d "{\"ticketId\":\"$TICKET_ID_MATCH\",\"branch\":\"$BRANCH_NAME\"}" 2>&1) || true
+        HOOK_STATUS=$(echo "$HOOK_RESPONSE" | tail -1)
+        HOOK_BODY=$(echo "$HOOK_RESPONSE" | sed '$d')
+        if [ "$HOOK_STATUS" = "200" ] || [ "$HOOK_STATUS" = "201" ]; then
+            echo "  Ticket $TICKET_ID_MATCH → in-progress ($BACKLOG_URL)"
+        else
+            echo "  Warning: backlog hook failed (HTTP $HOOK_STATUS): $HOOK_BODY"
+        fi
     fi
 fi
 
