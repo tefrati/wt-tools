@@ -438,7 +438,7 @@ if [ -n "$TICKET_ID_MATCH" ]; then
             -H "Authorization: Bearer $BACKLOG_KEY" \
             -H "Content-Type: application/json" \
             "$BACKLOG_URL/api/hooks/branch-created" \
-            -d "{\"ticketId\":\"$TICKET_ID_MATCH\",\"branch\":\"$BRANCH_NAME\"}" 2>&1) || true
+            -d "{\"project\":\"$REPO_NAME\",\"ticketId\":\"$TICKET_ID_MATCH\",\"branch\":\"$BRANCH_NAME\"}" 2>&1) || true
         HOOK_STATUS=$(echo "$HOOK_RESPONSE" | tail -1)
         HOOK_BODY=$(echo "$HOOK_RESPONSE" | sed '$d')
         if [ "$HOOK_STATUS" = "200" ] || [ "$HOOK_STATUS" = "201" ]; then
