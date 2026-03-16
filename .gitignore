@@ -1,0 +1,5 @@
+TASKS.md
+.dev-server.log
+.claude/settings.local.json
+.env.local
+.DS_Store

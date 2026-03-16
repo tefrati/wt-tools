@@ -66,7 +66,7 @@ wt-cleanup feature-add-oauth -r -f
 │   └── <repo-name>/
 │       ├── feature-add-oauth/     # Port 3001
 │       └── bugfix-fix-login/      # Port 3002
-└── v0-privacy-compliance-dashboard/  # Main repo (port 3000)
+└── <your-project>/                    # Main repo (port 3000)
 ```
 
 ## Port Assignment

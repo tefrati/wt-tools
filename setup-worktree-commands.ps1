@@ -7,7 +7,7 @@
     After running, you can use 'wt-create' and 'wt-cleanup' from any directory.
 #>
 
-$ScriptsDir = "C:\Users\tzah_\Dev\scripts"
+$ScriptsDir = $PSScriptRoot
 $ProfilePath = $PROFILE.CurrentUserAllHosts
 
 # Create profile if it doesn't exist

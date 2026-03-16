@@ -428,7 +428,9 @@ git worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH" || {
     exit 1
 }
 
-# Step 1.5: Notify backlog orchestrator of branch creation
+# Step 1.5: (Optional) Notify backlog orchestrator of branch creation
+# Set BACKLOG_ORCHESTRATOR_URL and BACKLOG_ORCHESTRATOR_API_KEY env vars to enable.
+# Skipped silently if BACKLOG_ORCHESTRATOR_API_KEY is not set.
 TICKET_ID_MATCH=$(echo "$BRANCH_NAME" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
 if [ -n "$TICKET_ID_MATCH" ]; then
     BACKLOG_URL="${BACKLOG_ORCHESTRATOR_URL:-http://localhost:3000}"

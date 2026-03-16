@@ -1,80 +1,91 @@
-# Worktree Management Scripts
+# wt-tools
 
-Quick parallel development workflow using git worktrees.
+Quick parallel development workflow using git worktrees. Cross-platform (Windows, macOS, Linux).
 
-## Setup (One-time)
+## What it does
+
+`wt-create` sets up a fully isolated worktree with one command:
+
+1. Creates a git worktree with a new branch
+2. Copies `.env.local` and `.claude/settings.local.json` from the main repo
+3. Auto-assigns a unique dev server port
+4. Runs `pnpm install`
+5. Opens your IDE (Cursor / VS Code)
+6. Starts the dev server and opens your browser
+
+`wt-cleanup` tears it down when you're done — kills the dev server, removes the worktree, deletes the branch.
+
+## Setup
+
+Clone this repo somewhere on your machine, then run the setup script:
 
 ```powershell
+# Windows (PowerShell)
 .\setup-worktree-commands.ps1
 ```
 
-Then restart your terminal or run `. $PROFILE`
+```bash
+# macOS / Linux
+chmod +x *.sh
+./setup-worktree-commands.sh
+```
 
-## Commands
+Restart your terminal (or run `. $PROFILE` / `source ~/.zshrc`).
+
+## Usage
 
 ### Create a worktree
 
-```powershell
+```bash
 # From inside any git repo
 wt-create feature/add-oauth
 
-# With specific port
-wt-create feature/add-oauth -Port 3005
+# With a specific port
+wt-create feature/add-oauth -p 3005        # macOS/Linux
+wt-create feature/add-oauth -Port 3005      # Windows
 ```
 
-**What it does:**
-1. Creates worktree at `C:\Users\tzah_\Dev\worktrees\<repo-name>\<branch-name>`
-2. Copies `.env.local` and `.claude\settings.local.json` from main repo
-3. Updates port in `.env.local`
-4. Creates `TASKS.md` for task tracking
-5. Runs `pnpm install`
-6. Opens Cursor IDE in the worktree
-7. Starts dev server in a new terminal tab
-8. Opens Chrome at the assigned port
+### Clean up a worktree
 
-### Cleanup a worktree
-
-```powershell
-# Basic cleanup (after PR merged)
-wt-cleanup feature-add-oauth
-
-# Also delete remote branch
-wt-cleanup feature-add-oauth -DeleteRemote
-
-# Skip confirmation
-wt-cleanup feature-add-oauth -DeleteRemote -Force
-```
-
-**What it does:**
-1. Kills any dev server running on the worktree's port
-2. Removes the git worktree
-3. Deletes the local branch
-4. Optionally deletes the remote branch
-5. Cleans up empty directories
-
-## File Structure
-
-```
-C:\Users\tzah_\Dev\
-├── scripts\
-│   ├── wt-create.ps1
-│   ├── wt-cleanup.ps1
-│   └── setup-worktree-commands.ps1
-├── worktrees\
-│   └── <repo-name>\
-│       ├── feature-add-oauth\     # Port 3001
-│       └── bugfix-fix-login\      # Port 3002
-└── v0-privacy-compliance-dashboard\  # Main repo (port 3000)
+```bash
+wt-cleanup feature-add-oauth               # basic cleanup
+wt-cleanup feature-add-oauth -r            # also delete remote branch (macOS/Linux)
+wt-cleanup feature-add-oauth -DeleteRemote  # also delete remote branch (Windows)
 ```
 
 ## Port Assignment
 
 - Main repo: 3000 (default)
-- Worktrees: Auto-assigned starting from 3001
-- Specify manually with `-Port` if needed
+- Worktrees: auto-assigned starting from 3001
+- Override manually with `-p` / `-Port`
+
+## File Structure
+
+```
+~/Dev/
+├── wt-tools/                          # This repo
+│   ├── wt-create.sh / .ps1
+│   ├── wt-cleanup.sh / .ps1
+│   └── setup-worktree-commands.sh / .ps1
+├── worktrees/
+│   └── <repo-name>/
+│       ├── feature-add-oauth/         # Port 3001
+│       └── bugfix-fix-login/          # Port 3002
+└── <your-project>/                    # Main repo (port 3000)
+```
+
+## Optional Integrations
+
+- **Backlog Orchestrator**: Set `BACKLOG_ORCHESTRATOR_URL` and `BACKLOG_ORCHESTRATOR_API_KEY` env vars to automatically update ticket status when creating branches. Silently skipped if not configured.
+- **Cursor IDE**: Falls back to VS Code if not installed.
+- **Ghostty terminal**: Best terminal experience on macOS; falls back to macOS Terminal or runs dev server in background.
 
 ## Tips
 
 - Branch names with `/` are converted to `-` for folder names
 - The worktree name shown in terminal is what you use for cleanup
-- `TASKS.md` is created in each worktree for tracking work
+- `TASKS.md` is created in each worktree for task tracking
+
+## License
+
+[MIT](LICENSE)

@@ -4,7 +4,7 @@
 # Run this script once to add the worktree commands to your shell profile.
 # After running, you can use 'wt-create' and 'wt-cleanup' from any directory.
 
-SCRIPTS_DIR="$HOME/Dev/scripts"
+SCRIPTS_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Detect shell and profile file
 if [ -n "$ZSH_VERSION" ]; then
