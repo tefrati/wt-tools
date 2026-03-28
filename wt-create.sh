@@ -335,8 +335,12 @@ git -C "$REPO_ROOT" pull || {
     exit 1
 }
 
-# Get repo name for organizing worktrees
-REPO_NAME=$(basename "$REPO_ROOT")
+# Get repo name from git remote (matches GitHub repo name for webhook consistency)
+REPO_NAME=$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null | sed 's/.*\///' | sed 's/\.git$//')
+if [ -z "$REPO_NAME" ]; then
+    # Fallback to directory name if no remote
+    REPO_NAME=$(basename "$REPO_ROOT")
+fi
 if [ -z "$REPO_NAME" ]; then
     echo "Error: Could not determine repository name from: $REPO_ROOT"
     exit 1
@@ -431,7 +435,7 @@ git worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH" || {
 # Step 1.5: Notify backlog orchestrator of branch creation
 TICKET_ID_MATCH=$(echo "$BRANCH_NAME" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
 if [ -n "$TICKET_ID_MATCH" ]; then
-    BACKLOG_URL="${BACKLOG_ORCHESTRATOR_URL:-http://localhost:3000}"
+    BACKLOG_URL="${BACKLOG_ORCHESTRATOR_URL:-https://backlog-orchestrator.vercel.app}"
     BACKLOG_KEY="${BACKLOG_ORCHESTRATOR_API_KEY:-}"
     if [ -n "$BACKLOG_KEY" ]; then
         HOOK_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
